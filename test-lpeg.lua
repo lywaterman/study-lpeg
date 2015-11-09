@@ -6284,8 +6284,10 @@ local then_st = '|'*C(fun_name)
 
 local function return_function_1(fun_name) 
     print('fun_name', fun_name)
-    return {fun=function ()
-        do_function(fun_name)
+    return {
+        type='call_fun',
+        fun=function ()
+            do_function(fun_name)
     end}
 end
 
@@ -6293,6 +6295,7 @@ local function return_function_2(time, fun_name)
     print('delay fun_name', time, fun_name)
     
     return {
+        type='call_delay_fun',
         delay=time,
         fun=function ()
             do_function(fun_name)
@@ -6304,6 +6307,7 @@ local function return_function_3(text, fun_name)
     print('choice fun_name', text, fun_name)
     
     return {
+        type='call_choice_fun',
         text=time,
         fun=function ()
             do_function(fun_name)
@@ -6315,6 +6319,7 @@ local function return_function_4(text)
     print('no fun_name', text)
     
     return {
+        type='call_no_name_fun',
         fun=function ()
             show(text)
         end 
@@ -6331,14 +6336,14 @@ local silently_st = new_line_space(P'<<silently>>') *Ct((new_line_space(set_st))
 
 local st_no_if = silently_st + select_st + call_function
 
-local function do_if_function(t)
+local function do_if_st(t)
     print(t)
 end
 
 local if_st = Ct(P'<<if '*space(Cg(exp, 'ifexp'))*P'>>' * new_line_space(Cg(st_no_if^0, 'if_st1')) * new_line_space(Cg(any_text_except(S'<['), 'if_text')) * new_line_space(Cg(st_no_if^0, 'if_st2')) *
 new_line_space(Ct(P'<<elseif '*space(Cg(exp, 'elseifexp'))*P'>>' *new_line_space(Cg(st_no_if^0, 'elseif_st1'))* new_line_space(Cg(any_text_except(S'<['), 'elseif_text')) *new_line_space(Cg(st_no_if^0, 'elseif_st2'))))^0 *
 new_line_space(P'<<else>>' *new_line_space(Cg(st_no_if^0, 'else_st1'))* new_line_space(Cg(any_text_except(S'<['), 'else_text')) *new_line_space(Cg(st_no_if^0, 'else_st2')) )^-1
-* new_line_space(P'<<endif>>')) / do_if_function
+* new_line_space(P'<<endif>>')) / do_if_st
 
 local st = st_no_if + if_st
 

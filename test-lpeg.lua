@@ -99,7 +99,7 @@ local new_line = S'\r\n'^0
 
 local new_line_sp = S' \r\n'^0
 
-local function new_line_space(pat) return new_line_sp*pat end
+local function new_line_space(pat) return new_line_sp*pat*new_line_sp end
 
 local b_operator = operatorComparison+operatorAddSub+operatorAndAnd+operatorOrOr
 

@@ -6274,7 +6274,7 @@ local exp = exp_op+exp_v
 
 --------set 表达式 set var
 local function set_var(name, value)
-    return name .. '=' .. tostring(value)
+    return {type='set_st', value=name .. '=' .. tostring(value)}
 end
 
 local set_st = P'<<set '*space(var)*'='*space(exp)*P'>>' / set_var
@@ -6330,7 +6330,10 @@ local call_function = '[['*space(C(fun_name))*']]'/return_function_1 + ('[['*spa
 
 local choice_st = P'<<choice '*space(call_function)*P'>>'
 
-local select_st = Ct(choice_st * space(Or) * choice_st)
+local function return_select(x) 
+    return {type='select', value=x}
+end
+local select_st = Ct(choice_st * space(Or) * choice_st) / return_select
 
 local silently_st = new_line_space(P'<<silently>>') *Ct((new_line_space(set_st))^0)* new_line_space(P'<<endsilently>>')
 
@@ -6420,7 +6423,7 @@ local fileContent = read_file("StoryData_cn.txt");
 
 --执行方法
 function do_function(fun_name)
-    local function_p = Ct(new_line_space(st)^0 * new_line_space(Cg(any_text_except(S'<['), 'text'))^0 * new_line_space(st)^0)
+    local function_p = Ct(new_line_space(st)^0 * new_line_space(C(any_text_except(S'<[')))^0 * new_line_space(st)^0)
     
     print(function_p:match(fun_name))
 end
@@ -6432,12 +6435,12 @@ end
 function do_function_list(test) 
    function_list = (fun_decl_list):match(test)
     
-   do_function(function_list["Start"])
+   do_function(function_list["dontknow"])
 end
 
 do_function_list(test)
 
-call_function:match "[sfdsf]"
+print(select_st:match "<<choice [[谁在说话？|whois]]>> | <<choice [[我收到了。|message received]]>>")
 
 --set_st:match "<<set $y=1+3>>"
 

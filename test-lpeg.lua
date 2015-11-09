@@ -4,6 +4,8 @@ require 'ml'.import()
 
 tostring=tstring
 
+function_list = {}
+
 match=lpeg.match
 P = lpeg.P
 S = lpeg.S
@@ -11,6 +13,7 @@ R = lpeg.R
 
 C = lpeg.C
 Ct= lpeg.Ct
+Cg = lpeg.Cg
 
 test = [===[:: Start
 <<silently>>
@@ -75,11 +78,26 @@ local fun_name = idenchar * (sp*idenchar+R'09')^0
 local digit = R'09'
 local digits= digit^1
 local cdigits = C(digits)
-local int = S'+-'^-1 * digits
+local int = S'+-'^-1 * digits / tonumber
 
-local bool=P'true'+P'false'
+local function to_bool (b) 
+    if b == 'true' then 
+        return true 
+    elseif b == 'false' then 
+        return false 
+    end
+end 
+local bool=(P'true'+P'false') / to_bool
 
-local time=digits*(P's'+P'm')
+local function to_second(t,s) 
+    if s == 's' then
+        return t
+    elseif s == 'm' then
+        return t * 60 
+    end
+end
+
+local time=int*C(P's'+P'm') / to_second
 
 local var = '$'*iden
 
@@ -179,21 +197,14 @@ local if_st = P'<<if '*space(exp)*P'>>' * new_line_space(any_text_except(S'<')) 
 --print(C(exp_op):match ' 1 + 1 ')
 --print(C(string):match '""')
 --
-print(Ct(fun_decl_list):match [==[
-:: launch
-[正在建立连接]
-[正在接收消息]
-喂喂？
-这玩意儿能用吗？
-有谁能收到吗
-<<choice [[谁在说话？|whois]]>> | <<choice [[我收到了。|message received]]>>
+print(Ct(fun_decl_list):match(test))
 
-:: fuck
-fuck
-]==])
+print(Ct(time):match "1m")
 
 
+function do_function_list() 
 
+end
 
 
 

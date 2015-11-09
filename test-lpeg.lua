@@ -132,6 +132,7 @@ local function any_text_except(except) return (P(1)-except)^1 end
 
 local exp_v = int+var+bool+time+string
 
+-------------------------------------------------
 local function to_lua_exp(ev1, os, ev2) 
     print(ev1, os, ev2)
     if os == '+' then
@@ -149,6 +150,7 @@ local function to_lua_exp(ev1, os, ev2)
     end
 end
 local exp_op = space(exp_v)*C(b_operator)*space(exp_v) / to_lua_exp
+---------------------------------------------------
 
 local exp = exp_op+exp_v
 
@@ -233,7 +235,7 @@ end
 
 do_function_list(test)
 
-set_st:match "<<set $y=1>>"
+set_st:match "<<set $y=1+3>>"
 
 print(exp_op:match "1+2")
 

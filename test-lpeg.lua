@@ -54,7 +54,7 @@ test = [===[:: Start
 <<set $plural = "none">>
 <<set $testrods = 10>>
 <<endsilently>>
-#[通讯正在接入]#
+[通讯正在接入]
 [[launch]]
 
 
@@ -6280,9 +6280,48 @@ end
 local set_st = P'<<set '*space(var)*'='*space(exp)*P'>>' / set_var
 ---------------------------------
 
-local then_st = '|'*fun_name
+local then_st = '|'*C(fun_name)
 
-local call_function = '[['*space(fun_name)*']]' + ('[['*space(P'delay')*time*space(then_st)*']]') + ('[['*any_text_except(S'|]')*then_st*']]')
+local function return_function_1(fun_name) 
+    print('fun_name', fun_name)
+    return {fun=function ()
+        do_function(fun_name)
+    end}
+end
+
+local function return_function_2(time, fun_name)
+    print('delay fun_name', time, fun_name)
+    
+    return {
+        delay=time,
+        fun=function ()
+            do_function(fun_name)
+        end 
+    }
+end
+
+local function return_function_3(text, fun_name)
+    print('choice fun_name', text, fun_name)
+    
+    return {
+        text=time,
+        fun=function ()
+            do_function(fun_name)
+        end 
+    }
+end
+
+local function return_function_4(text)
+    print('no fun_name', text)
+    
+    return {
+        fun=function ()
+            show(text)
+        end 
+    }
+end
+
+local call_function = '[['*space(C(fun_name))*']]'/return_function_1 + ('[['*space(P'delay')*time*space(then_st)*']]')/return_function_2 + ('[['*C(any_text_except(S'|]'))*then_st*']]')/return_function_3+('['*C(any_text_except(S']'))*']')/return_function_4
 
 local choice_st = P'<<choice '*space(call_function)*P'>>'
 
@@ -6374,20 +6413,26 @@ end
 
 local fileContent = read_file("StoryData_cn.txt");
 
-function do_function(test)
+--执行方法
+function do_function(fun_name)
+    local function_p = Ct(new_line_space(st)^0 * new_line_space(Cg(any_text_except(S'<['), 'text'))^0 * new_line_space(st)^0)
+    
+    print(function_p:match(fun_name))
+end
 
+function delay_do_function(fun_name) 
 
 end
 
 function do_function_list(test) 
-   local c_t = (fun_decl_list):match(test)
+   function_list = (fun_decl_list):match(test)
     
-   print(c_t["Start"])
+   do_function(function_list["Start"])
 end
 
 do_function_list(test)
 
-
+call_function:match "[sfdsf]"
 
 --set_st:match "<<set $y=1+3>>"
 

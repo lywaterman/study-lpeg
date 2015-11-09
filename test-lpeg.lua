@@ -131,10 +131,7 @@ local b_operator = operatorComparison+operatorAddSub+operatorAndAnd+operatorOrOr
 
 local function any_text_except(except) return (P(1)-except)^1 end
 
-local function to_var_value(name)
-    return _G[name]
-end
-local exp_v = int+var/to_var_value+bool+time+string
+local exp_v = int+var+bool+time+string
 
 -------------------------------------------------
 local function to_lua_exp(ev1, os, ev2) 
@@ -153,7 +150,7 @@ local exp = exp_op+exp_v
 
 --------set 表达式 set var
 local function set_var(name, value)
-    return name .. '=' .. value
+    return name .. '=' .. tostring(value)
 end
 
 local set_st = P'<<set '*space(var)*'='*space(exp)*P'>>' / set_var
@@ -167,7 +164,7 @@ local choice_st = P'<<choice '*space(call_function)*P'>>'
 
 local select_st = choice_st * space(Or) * choice_st
 
-local silently_st = new_line_space(P'<<silently>>') *(new_line_space(set_st))^0* new_line_space(P'<<endsilently>>')
+local silently_st = new_line_space(P'<<silently>>') *Ct((new_line_space(set_st))^0)* new_line_space(P'<<endsilently>>')
 
 local st_no_if = silently_st + select_st + call_function
 
@@ -175,13 +172,17 @@ local function do_if_function(t)
     print(t)
 end
 
-local if_st = Ct(P'<<if '*space(Cg(exp, 'ifexp'))*P'>>' * new_line_space(Cg(any_text_except(S'<['), 'if_text')) * 
-new_line_space(P'<<elseif '*space(Cg(exp, 'elseifexp'))*P'>>' * new_line_space(Cg(any_text_except(S'<['), 'elseif_text')))^0 *
-new_line_space(P'<<else>>' * new_line_space(Cg(any_text_except(S'<['), 'else_text')))^-1
+local if_st = Ct(P'<<if '*space(Cg(exp, 'ifexp'))*P'>>' * new_line_space(Cg(st_no_if^0, 'if_st1')) * new_line_space(Cg(any_text_except(S'<['), 'if_text')) * new_line_space(Cg(st_no_if^0, 'if_st2')) *
+new_line_space(P'<<elseif '*space(Cg(exp, 'elseifexp'))*P'>>' *new_line_space(Cg(st_no_if^0, 'elseif_st1'))* new_line_space(Cg(any_text_except(S'<['), 'elseif_text')))^0 *new_line_space(Cg(st_no_if^0, 'elseif_st2')) *
+new_line_space(P'<<else>>' *new_line_space(Cg(st_no_if^0, 'else_st1'))* new_line_space(Cg(any_text_except(S'<['), 'else_text')) *new_line_space(Cg(st_no_if^0, 'else_st2')) )^-1
 * new_line_space(P'<<endif>>')) / do_if_function
 
-print(C(if_st):match [==[<<if $x is 1>>你说的福建省地方
+local st = st_no_if + if_st
 
+print(C(if_st):match [==[<<if $x is 1>>你说的福建省地方
+<<silently>><<set $toldname = 0>>
+<<set $boulderdayone = 0>>
+<<endsilently>>
 <<elseif $x is 2>>收到了附近的考虑是放假了第三方<<else>>fuckyou<<endif>>]==])
 
 --print(C(set_st):match '<<set $x = $y+1>>')

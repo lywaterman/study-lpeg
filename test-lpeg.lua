@@ -6308,7 +6308,7 @@ local function return_function_3(text, fun_name)
     
     return {
         type='call_choice_fun',
-        text=time,
+        text=text,
         fun=function ()
             do_function(fun_name)
         end 
@@ -6330,7 +6330,7 @@ local call_function = '[['*space(C(fun_name))*']]'/return_function_1 + ('[['*spa
 
 local choice_st = P'<<choice '*space(call_function)*P'>>'
 
-local select_st = choice_st * space(Or) * choice_st
+local select_st = Ct(choice_st * space(Or) * choice_st)
 
 local silently_st = new_line_space(P'<<silently>>') *Ct((new_line_space(set_st))^0)* new_line_space(P'<<endsilently>>')
 

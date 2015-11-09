@@ -1,5 +1,9 @@
 require 'lpeg'
 
+require 'ml'.import()
+
+tostring=tstring
+
 match=lpeg.match
 P = lpeg.P
 S = lpeg.S
@@ -83,7 +87,7 @@ local Q = P'"'
 
 local string =  Q * (1-Q)^0 * Q
 
-local fun_decl = P'::'*space(C(fun_name))*S'\r\n'^1*C(P(1)^0)
+local fun_decl = P'::'*space(C(fun_name))*S'\r\n'^1*C((P(1)-':')^0)
 
 
 local assignmentOperator= P'='+P'+='+P'-='
@@ -100,6 +104,8 @@ local new_line = S'\r\n'^0
 local new_line_sp = S' \r\n'^0
 
 local function new_line_space(pat) return new_line_sp*pat*new_line_sp end
+
+local fun_decl_list = (new_line_space(fun_decl))^1
 
 local b_operator = operatorComparison+operatorAddSub+operatorAndAnd+operatorOrOr
 
@@ -125,9 +131,9 @@ local silently_st = new_line_space(P'<<silently>>') *(new_line_space(set_st))^0*
 
 local if_st = P'<<if '*space(exp)*P'>>' * new_line_space(any_text_except(S'<')) * new_line_space(P'<<elseif '*space(exp)*P'>>' * new_line_space(any_text_except(S'<')))^0 * new_line_space(P'<<endif>>') 
 
-print(C(if_st):match [==[<<if $x is 1>>你说的福建省地方
-
-<<elseif $x is 2>>收到了附近的考虑是放假了第三方<<endif>>]==])
+--print(C(if_st):match [==[<<if $x is 1>>你说的福建省地方
+--
+--<<elseif $x is 2>>收到了附近的考虑是放假了第三方<<endif>>]==])
 
 --print(C(set_st):match '<<set $x = $y+1>>')
 --
@@ -173,15 +179,18 @@ print(C(if_st):match [==[<<if $x is 1>>你说的福建省地方
 --print(C(exp_op):match ' 1 + 1 ')
 --print(C(string):match '""')
 --
---print(C(fun_decl):match [==[
---:: launch
---[正在建立连接]
---[正在接收消息]
---喂喂？
---这玩意儿能用吗？
---有谁能收到吗
---<<choice [[谁在说话？|whois]]>> | <<choice [[我收到了。|message received]]>>
---]==])
+print(Ct(fun_decl_list):match [==[
+:: launch
+[正在建立连接]
+[正在接收消息]
+喂喂？
+这玩意儿能用吗？
+有谁能收到吗
+<<choice [[谁在说话？|whois]]>> | <<choice [[我收到了。|message received]]>>
+
+:: fuck
+fuck
+]==])
 
 
 

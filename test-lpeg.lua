@@ -105,66 +105,70 @@ local b_operator = operatorComparison+operatorAddSub+operatorAndAnd+operatorOrOr
 
 local function any_text_except(except) return (P(1)-except)^1 end
 
-
 local exp_v = int+var+bool+time+string
 
 local exp_op = space(exp_v)*b_operator*space(exp_v)
 
 local exp = exp_op+exp_v
 
-local set_st = '<<set '*space(var)*'='*space(exp)*'>>'
+local set_st = P'<<set '*space(var)*'='*space(exp)*P'>>'
 
 local then_st = '|'*fun_name
 
-local call_function = '[['*space(fun_name)*']]' + ('[['*space(P'delay')*time*space(then_st)*']]') + ('[['*any_text_except('|')*then_st*']]')
+local call_function = '[['*space(fun_name)*']]' + ('[['*space(P'delay')*time*space(then_st)*']]') + ('[['*any_text_except(S'|]')*then_st*']]')
 
-local choice_st = '<<choice '*space(call_function)*'>>'
+local choice_st = P'<<choice '*space(call_function)*P'>>'
 
-local select_st = space(choice_st) * Or * space(choice_st)
+local select_st = choice_st * space(Or) * choice_st
 
 local silently_st = new_line_space(P'<<silently>>') *(new_line_space(set_st))^0* new_line_space(P'<<endsilently>>')
 
-print(C(set_st):match '<<set $x = $y+1>>')
+local if_st = P'<<if '*space(exp)*P'>>' * new_line_space(any_text_except(S'<')) * new_line_space(P'<<elseif '*space(exp)*P'>>' * new_line_space(any_text_except(S'<')))^0 * new_line_space(P'<<endif>>') 
 
+print(C(if_st):match [==[<<if $x is 1>>你说的福建省地方
 
-print(C(silently_st):match [==[<<silently>>
-    <<set $toldname = 0>>
-    <<set $boulderdayone = 0>>
-    <<set $deadenddayone = 0>>
-    <<set $hurtshoulder = 0>>
-    <<set $mapsuggest = 0>>
-    <<set $toldstudent = 0>>
-    <<set $backofship = 0>>
-    <<set $frontofship = 0>>
-    <<set $rations = 0>>
-    <<set $ratpellets = 0>>
-    <<set $startedburialtalk = 0>>
-    <<set $capalive = 1>>
-    <<set $ginny = 0>>
-    <<set $power = "none">>
-    <<set $capburied = 0>>
-    <<set $crewburied = 0>>
-    <<set $hurtankle = 0>>
-    <<set $pills = 0>>
-    <<set $glowrods = 0>>
-    <<set $ginnycaravel = 0>>
-    <<set $zombierats = 0>>
-    <<set $compassweird = 0>>
-    <<set $bringginnytwo = 0>>
-    <<set $proximityalarm = 0>>
-    <<set $trycaravelgalley = 0>>
-    <<set $homemadecompass = 0>>
-    <<set $triedgalley = 0>>
-    <<set $peakdoorway = 0>>
-    <<set $sendingsos = 0>>
-    <<set $warnship = 0>>
-    <<set $overridetarget = 0>>
-    <<set $clockwisecrater = 0>>
-    <<set $plural = "none">>
-    <<set $testrods = 10>>
-    <<endsilently>>
-   ]==]
-)
+<<elseif $x is 2>>收到了附近的考虑是放假了第三方<<endif>>]==])
+
+--print(C(set_st):match '<<set $x = $y+1>>')
+--
+--print(C(silently_st):match [==[
+--    <<silently>><<set $toldname = 0>>
+--    <<set $boulderdayone = 0>>
+--    <<set $deadenddayone = 0>>
+--    <<set $hurtshoulder = 0>>
+--    <<set $mapsuggest = 0>>
+--    <<set $toldstudent = 0>>
+--    <<set $backofship = 0>>
+--    <<set $frontofship = 0>>
+--    <<set $rations = 0>>
+--    <<set $ratpellets = 0>>
+--    <<set $startedburialtalk = 0>>
+--    <<set $capalive = 1>>
+--    <<set $ginny = 0>>
+--    <<set $power = "none">>
+--    <<set $capburied = 0>>
+--    <<set $crewburied = 0>>
+--    <<set $hurtankle = 0>>
+--    <<set $pills = 0>>
+--    <<set $glowrods = 0>>
+--    <<set $ginnycaravel = 0>>
+--    <<set $zombierats = 0>>
+--    <<set $compassweird = 0>>
+--    <<set $bringginnytwo = 0>>
+--    <<set $proximityalarm = 0>>
+--    <<set $trycaravelgalley = 0>>
+--    <<set $homemadecompass = 0>>
+--    <<set $triedgalley = 0>>
+--    <<set $peakdoorway = 0>>
+--    <<set $sendingsos = 0>>
+--    <<set $warnship = 0>>
+--    <<set $overridetarget = 0>>
+--    <<set $clockwisecrater = 0>>
+--    <<set $plural = "none">>
+--    <<set $testrods = 10>>
+--    <<endsilently>>
+--   ]==]
+--)
 
 --print(C(exp_op):match ' 1 + 1 ')
 --print(C(string):match '""')

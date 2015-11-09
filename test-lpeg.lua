@@ -2,6 +2,7 @@ require 'lpeg'
 
 require 'ml'.import()
 
+x=1
 tostring=tstring
 
 function_list = {}
@@ -130,11 +131,13 @@ local b_operator = operatorComparison+operatorAddSub+operatorAndAnd+operatorOrOr
 
 local function any_text_except(except) return (P(1)-except)^1 end
 
-local exp_v = int+var+bool+time+string
+local function to_var_value(name)
+    return _G[name]
+end
+local exp_v = int+var/to_var_value+bool+time+string
 
 -------------------------------------------------
 local function to_lua_exp(ev1, os, ev2) 
-    print(ev1, os, ev2)
     if os == '+' then
         return ev1 + ev2
     elseif os == '-' then
@@ -144,6 +147,7 @@ local function to_lua_exp(ev1, os, ev2)
     elseif os == 'or' then
         return ev1 or ev2
     elseif os == 'is' then
+        print(ev1, os, ev2)
         return ev1 == ev2
     elseif os == 'gte' then
         return ev1 >= ev2
@@ -173,11 +177,18 @@ local select_st = choice_st * space(Or) * choice_st
 
 local silently_st = new_line_space(P'<<silently>>') *(new_line_space(set_st))^0* new_line_space(P'<<endsilently>>')
 
-local if_st = P'<<if '*space(exp)*P'>>' * new_line_space(any_text_except(S'<')) * new_line_space(P'<<elseif '*space(exp)*P'>>' * new_line_space(any_text_except(S'<')))^0 * new_line_space(P'<<endif>>') 
+local function do_if_function(t)
+    print(t)
+end
 
---print(C(if_st):match [==[<<if $x is 1>>你说的福建省地方
---
---<<elseif $x is 2>>收到了附近的考虑是放假了第三方<<endif>>]==])
+local if_st = Ct(P'<<if '*space(Cg(exp, 'ifexp'))*P'>>' * new_line_space(Cg(any_text_except(S'<['), 'if_text')) * 
+new_line_space(P'<<elseif '*space(Cg(exp, 'elseifexp'))*P'>>' * new_line_space(Cg(any_text_except(S'<['), 'elseif_text')))^0 *
+new_line_space(P'<<else>>' * new_line_space(Cg(any_text_except(S'<['), 'else_text')))^-1
+* new_line_space(P'<<endif>>')) / do_if_function
+
+print(C(if_st):match [==[<<if $x is 1>>你说的福建省地方
+
+<<elseif $x is 2>>收到了附近的考虑是放假了第三方<<else>>fuckyou<<endif>>]==])
 
 --print(C(set_st):match '<<set $x = $y+1>>')
 --

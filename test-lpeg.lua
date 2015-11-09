@@ -138,20 +138,13 @@ local exp_v = int+var/to_var_value+bool+time+string
 
 -------------------------------------------------
 local function to_lua_exp(ev1, os, ev2) 
-    if os == '+' then
-        return ev1 + ev2
-    elseif os == '-' then
-        return ev1 - ev2
-    elseif os == 'and' then
-        return ev1 and ev2
-    elseif os == 'or' then
-        return ev1 or ev2
-    elseif os == 'is' then
-        print(ev1, os, ev2)
-        return ev1 == ev2
+    if os == 'is' then
+        os = '=='
     elseif os == 'gte' then
-        return ev1 >= ev2
+        os = '>='
     end
+
+    return ev1 .. os .. ev2
 end
 local exp_op = space(exp_v)*C(b_operator)*space(exp_v) / to_lua_exp
 ---------------------------------------------------
@@ -160,8 +153,7 @@ local exp = exp_op+exp_v
 
 --------set 表达式 set var
 local function set_var(name, value)
-    print(name, value)
-   _G[name]=value
+    return name .. '=' .. value
 end
 
 local set_st = P'<<set '*space(var)*'='*space(exp)*P'>>' / set_var
@@ -176,6 +168,8 @@ local choice_st = P'<<choice '*space(call_function)*P'>>'
 local select_st = choice_st * space(Or) * choice_st
 
 local silently_st = new_line_space(P'<<silently>>') *(new_line_space(set_st))^0* new_line_space(P'<<endsilently>>')
+
+local st_no_if = silently_st + select_st + call_function
 
 local function do_if_function(t)
     print(t)

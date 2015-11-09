@@ -14,6 +14,7 @@ R = lpeg.R
 C = lpeg.C
 Ct= lpeg.Ct
 Cg = lpeg.Cg
+Cf = lpeg.Cf
 
 test = [===[:: Start
 <<silently>>
@@ -105,7 +106,7 @@ local Q = P'"'
 
 local string =  Q * (1-Q)^0 * Q
 
-local fun_decl = P'::'*space(C(fun_name))*S'\r\n'^1*C((P(1)-':')^0)
+local fun_decl = Cg(P'::'*space(C(fun_name))*S'\r\n'^1*C((P(1)-':')^0))
 
 
 local assignmentOperator= P'='+P'+='+P'-='
@@ -123,7 +124,7 @@ local new_line_sp = S' \r\n'^0
 
 local function new_line_space(pat) return new_line_sp*pat*new_line_sp end
 
-local fun_decl_list = (new_line_space(fun_decl))^1
+local fun_decl_list = Cf(Ct""*(new_line_space(fun_decl))^1, rawset)
 
 local b_operator = operatorComparison+operatorAddSub+operatorAndAnd+operatorOrOr
 
@@ -197,16 +198,17 @@ local if_st = P'<<if '*space(exp)*P'>>' * new_line_space(any_text_except(S'<')) 
 --print(C(exp_op):match ' 1 + 1 ')
 --print(C(string):match '""')
 --
-print(Ct(fun_decl_list):match(test))
 
 print(Ct(time):match "1m")
 
 
-function do_function_list() 
-
+function do_function_list(test) 
+   local c_t = (fun_decl_list):match(test)
+    
+   print(c_t)
 end
 
-
+do_function_list(test)
 
 
 

@@ -6,8 +6,6 @@ tostring=tstring
 
 function_list = {}
 
-global_vars = {}
-
 match=lpeg.match
 P = lpeg.P
 S = lpeg.S
@@ -134,14 +132,30 @@ local function any_text_except(except) return (P(1)-except)^1 end
 
 local exp_v = int+var+bool+time+string
 
-local exp_op = space(exp_v)*b_operator*space(exp_v)
+local function to_lua_exp(ev1, os, ev2) 
+    print(ev1, os, ev2)
+    if os == '+' then
+        return ev1 + ev2
+    elseif os == '-' then
+        return ev1 - ev2
+    elseif os == 'and' then
+        return ev1 and ev2
+    elseif os == 'or' then
+        return ev1 or ev2
+    elseif os == 'is' then
+        return ev1 == ev2
+    elseif os == 'gte' then
+        return ev1 >= ev2
+    end
+end
+local exp_op = space(exp_v)*C(b_operator)*space(exp_v) / to_lua_exp
 
 local exp = exp_op+exp_v
 
 --------set 表达式 set var
 local function set_var(name, value)
     print(name, value)
-   global_vars[name]=value
+   _G[name]=value
 end
 
 local set_st = P'<<set '*space(var)*'='*space(exp)*P'>>' / set_var
@@ -221,7 +235,9 @@ do_function_list(test)
 
 set_st:match "<<set $y=1>>"
 
+print(exp_op:match "1+2")
 
+--print(y)
 
 
 

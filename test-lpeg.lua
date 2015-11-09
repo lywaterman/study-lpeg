@@ -6,6 +6,8 @@ tostring=tstring
 
 function_list = {}
 
+global_vars = {}
+
 match=lpeg.match
 P = lpeg.P
 S = lpeg.S
@@ -100,7 +102,7 @@ end
 
 local time=int*C(P's'+P'm') / to_second
 
-local var = '$'*iden
+local var = '$'*C(iden)
 
 local Q = P'"'
 
@@ -136,7 +138,14 @@ local exp_op = space(exp_v)*b_operator*space(exp_v)
 
 local exp = exp_op+exp_v
 
-local set_st = P'<<set '*space(var)*'='*space(exp)*P'>>'
+--------set 表达式 set var
+local function set_var(name, value)
+    print(name, value)
+   global_vars[name]=value
+end
+
+local set_st = P'<<set '*space(var)*'='*space(exp)*P'>>' / set_var
+---------------------------------
 
 local then_st = '|'*fun_name
 
@@ -210,6 +219,7 @@ end
 
 do_function_list(test)
 
+set_st:match "<<set $y=1>>"
 
 
 

@@ -4,8 +4,18 @@ require 'ml'.import()
 
 require 'storydata_cn'
 
-x=1
+function eval(s)
+    local f = loadstring(s) 
+    return f()
+end
+
 tostring=tstring
+
+module('test-lpeg', package.seeall)
+
+function show_text(text)
+    print('show_text', '[' .. text .. ']')
+end
 
 function_list = {}
 
@@ -25,7 +35,7 @@ V = lpeg.V
 
 local sp=P' '^0
 local function space(pat) return sp*pat*sp end
-local function space_or_parent(pat) return space(C(S'( '^0) * pat * C(S' )'^0)) end
+local function space_or_parent(pat) return space((C(P'(')+P' ')^0 * pat * (C(P')')+P' ')^0) end
 
 local idenchar = R('AZ', 'az')+'_'
 local iden = idenchar * (idenchar+R'09')^0
@@ -66,7 +76,7 @@ local string =  Q * (1-Q)^0 * Q
 
 local assignmentOperator= P'='+P'+='+P'-='
 
-local operatorComparison = P'is'+P'gte'
+local operatorComparison = P'is'+P'gte'+P'eq'
 local operatorAddSub = P'+'+P'-'
 local operatorAndAnd = P'and'
 local operatorOrOr = P'or'
@@ -87,17 +97,22 @@ local exp_v = int+var+bool+time+string
 -------------------------------------------------
 local function to_lua_exp(list) 
     local value = ""
-   for i, v in ipairs(list) do
-    if v == 'is' then
-        v = '=='
-    elseif v == 'gte' then
-        v = '>='
-    end
+    for i, v in ipairs(list) do
+        if v == 'is' or v == 'eq' then
+            v = '=='
+        elseif v == 'gte' then
+            v = '>='
+        end
 
-    value = value .. v ..' ' 
+        if i == #list then
+            value = value .. v
+        else
+
+            value = value .. v .. ' ' 
+        end
     end 
 
-    return {type='exp', value=value}
+    return {type='exp', value="return " .. value}
 end
 local exp_op = Ct(space_or_parent(exp_v)*(C(b_operator)*space_or_parent(exp_v))^0) / to_lua_exp
 ---------------------------------------------------
@@ -106,17 +121,17 @@ local exp_op = Ct(space_or_parent(exp_v)*(C(b_operator)*space_or_parent(exp_v))^
 local exp = exp_op
 
 --------set 表达式 set var
-local function set_var(name, value)
-    return {type='set_st', value=name .. '=' .. tostring(value)}
+local function set_var(name, op, value)
+    return {type='set_st', value={op, name, value}}
 end
 
-local set_st = (P'<<set '*space(var)*assignmentOperator*space(exp)*P'>>') / set_var
+local set_st = (P'<<set '*space(var)*C(assignmentOperator)*space(exp)*P'>>') / set_var
 ---------------------------------
 
 local then_st = '|'*C(fun_name)
 
 local function return_function_1(fun_name) 
-    print('fun_name', fun_name)
+    --print('fun_name', fun_name)
     return {
         type='call_fun',
         fun=function ()
@@ -125,10 +140,10 @@ local function return_function_1(fun_name)
 end
 
 local function return_function_2(time, fun_name)
-    print('delay fun_name', time, fun_name)
+    --print('delay fun_name', time, fun_name)
     
     return {
-        type='call_delay_fun',
+        type='call_fun',
         delay=time,
         fun=function ()
             do_function(fun_name)
@@ -137,10 +152,10 @@ local function return_function_2(time, fun_name)
 end
 
 local function return_function_3(text, fun_name)
-    print('choice fun_name', text, fun_name)
+    --print('choice fun_name', text, fun_name)
     
     return {
-        type='call_choice_fun',
+        type='call_fun',
         text=text,
         fun=function ()
             do_function(fun_name)
@@ -149,12 +164,12 @@ local function return_function_3(text, fun_name)
 end
 
 local function return_function_4(text)
-    print('no fun_name', text)
+    --print('no fun_name', text)
     
     return {
-        type='call_no_name_fun',
+        type='call_fun',
         fun=function ()
-            show(text)
+            show_text(text)
         end 
     }
 end
@@ -186,8 +201,8 @@ end
 local ST_LIST = P{
     'ST';
     ST = (new_line_space(lpeg.V"if_st"+st_no_if)),
-    if_st =  Ct(Cg(Ct(P'<<if ' * space(exp) * P'>>' * new_line_space(V"ST")^1), 'if_block') *
-            Cg(Ct(new_line_space(P'<<elseif '* space(exp) * P'>>' * new_line_space(V"ST")^1)^0), 'elseif_block') * 
+    if_st =  Ct(Cg(Ct(P'<<if ' * space(exp) * P'>>' * (new_line_space(V"ST"))^1), 'if_block') *
+            Cg(Ct(Ct(new_line_space(P'<<elseif '* space(exp) * P'>>' * new_line_space(V"ST")^1))^0), 'elseif_blocks') * 
             Cg(Ct(new_line_space(P'<<else>>'                      * new_line_space(V"ST")^1)^-1), 'else_block') * 
             new_line_space(P'<<endif>>')) / do_if_st
 } ^ 1
@@ -198,10 +213,27 @@ local fun_decl_list = Cf(Ct""*(new_line_space(fun_decl))^1, rawset)
 
 local function_p = Ct(ST_LIST)
 
-print(exp:match "(($x+5) is 0) and $y is 1 and ($z is 1)")
+print(function_p:match [==[
+<<silently>><<set $rations = 1>><<set $hurtshoulder = 1>><<endsilently>>
+我的肩膀都甩脱臼了！
+可是这太值得了！
+因为我在痛不欲生——！的同时！——吃着辣椒通心粉，喝着瓶装水！
+这辣椒通心粉有点恶心——！的同时！——是我这辈子吃过最好吃的东西！
+可惜马上就要吃完了……
+……然后我就得处理我可怜的肩膀了，为了一份辣椒通心粉，我也是拼了，对着一扇打不开的液压门锤了那么久。
+不过那个难题还是留给3分钟之后的我吧。
+<<if $ratpellets eq 1>>而且我看谁都不会有反对意见：不论怎么看，这都比老鼠饲料好吃一万倍！
+我现在有了食物和水，还有老鼠饲料作战备粮。
+得考虑一下过夜的问题了。[[sleepingplans]]
+<<else>>那么，现在食物的问题解决了，我可以要么去看看实验室里还剩下什么东西没有……
+……要么考虑睡觉的事儿了。你怎么看？
+<<choice [[去实验室看看。|trythelab]]>> | <<choice [[准备洗洗睡吧。|sleepingplans]]>><<endif>>]==]
+)
+
+--[====[print(exp:match "(($x+5) is 0) and $y is 1 and ($z is 1)")
 
 print(function_p:match [==[
-<<silently>><<set $ratpellets = 1>><<endsilently>>
+<<silently>><<set $ratpellets += 1>><<endsilently>>
 <<if $rations is 0>>还有个（有点）好的消息。我不会饿死在这里了。我找到了老鼠饲料，以及一个半满的水瓶。
 瞧瞧。我们这叫“半满”呢。
 简直是太乐观了。
@@ -217,7 +249,8 @@ print(function_p:match [==[
 瞧瞧。我们这叫“半满”呢。
 简直是太乐观了。
 总之，现在天色已晚。我最好想好怎么睡觉的问题。
-[[sleepingplans]]<<endif>>]==])
+<<elseif $y is 2>> 年历史的减肥的律师费
+[[sleepingplans]]<<endif>>]==]) ]====]
 
 
 
@@ -303,8 +336,11 @@ local fileContent = read_file("StoryData_cn.txt");
 
 --执行方法
 function do_function(fun_name)
-    
-    print(function_p:match(function_list[fun_name]))
+    print('do_function', fun_name)
+    local sts = function_p:match(function_list[fun_name])
+    print('function body', function_list[fun_name]) 
+    print('fun_sts', sts)
+    eval_st_list(sts)
 end
 
 function delay_do_function(fun_name) 
@@ -314,10 +350,106 @@ end
 function do_function_list(data) 
    function_list = (fun_decl_list):match(data)
     
-   do_function('trythelab')
+   do_function('Start')
 end
 
---do_function_list(all_data)
+function eval_exp(exp) 
+    return eval(exp.value)
+end
+
+function eval_set_st(set_st) 
+    local value = set_st.value
+    local op = value[1] 
+    local name=value[2]
+    local exp = value[3]
+
+    if op == '=' then
+        _M[name] = eval_exp(exp)
+    elseif op == '+=' then
+        _M[name] = _M[name] + eval_exp(exp)
+    elseif op == '-=' then
+        _M[name] = _M[name] - eval_exp(exp)
+    else
+        assert(false, op)
+    end
+end
+
+function eval_if_st(st)
+    local exp = st.value.if_block[1].value
+    local else_block = st.value.else_block
+
+    local elseif_blocks = st.value.elseif_blocks
+
+    if eval(exp) then
+        eval_st_list_not_first(st.value.if_block) 
+    elseif (#elseif_blocks > 0) and (elseif_blocks[1] ~= nil) and eval(elseif_blocks[1]) then
+        eval_st_list_not_first(st.value.elseif_blocks[1]) 
+    elseif (#elseif_blocks > 0) and (elseif_blocks[2] ~= nil) and eval(elseif_blocks[2]) then
+        eval_st_list_not_first(st.value.elseif_blocks[2]) 
+    elseif (#elseif_blocks > 0) and (elseif_blocks[3] ~= nil) and eval(elseif_blocks[3]) then
+        eval_st_list_not_first(st.value.elseif_blocks[3]) 
+    elseif (#elseif_blocks > 0) and (elseif_blocks[4] ~= nil) and eval(elseif_blocks[4]) then
+        eval_st_list_not_first(st.value.elseif_blocks[4]) 
+    elseif (#elseif_blocks > 0) and (elseif_blocks[5] ~= nil) and eval(elseif_blocks[5]) then
+        eval_st_list_not_first(st.value.elseif_blocks[5]) 
+    elseif (#elseif_blocks > 0) and (elseif_blocks[6] ~= nil) and eval(elseif_blocks[6]) then
+        eval_st_list_not_first(st.value.elseif_blocks[6]) 
+    elseif (#else_block>0) then
+        eval_st_list(else_block)
+    end 
+end
+
+function eval_call_function(fun)
+    fun.fun()
+end
+
+function eval_select_st(st)
+    print('请其中选择一个:')
+    
+    for i,v in ipairs(st.value) do
+        print(i, v.text)
+    end
+
+    local choice = tonumber(io.read())
+
+    eval_call_function(st.value[choice])
+end
+
+function eval_st(st) 
+   print('eval:', st)
+   if st.type == 'set_st' then
+       return eval_set_st(st)
+   elseif st.type == "silently_st" then
+       for i, v in ipairs(st.value) do
+            assert(v.type == 'set_st')
+            eval_st(v)
+       end
+   elseif st.type == 'select_st' then
+        eval_select_st(st)
+   elseif st.type == 'if_st' then
+        eval_if_st(st)
+   elseif st.type == 'text_st' then
+        show_text(st.value)
+   elseif st.type == 'call_fun' then
+        eval_call_function(st)
+   else
+        assert(false, st.type)
+   end
+end
+
+function eval_st_list_not_first(st_list)
+    for i=2, #st_list do
+        eval_st(st_list[i])
+    end
+end
+
+function eval_st_list(st_list)
+    for i,v in ipairs(st_list) do
+        eval_st(v)
+    end
+end
+
+do_function_list(all_data)
 
 --print(select_st:match "<<choice [[谁在说话？|whois]]>> | <<choice [[我收到了。|message received]]>>")
 

@@ -6,7 +6,7 @@ require 'storydata_cn'
 
 function eval(s)
     local f = loadstring(s) 
-    print('tt', s, f)
+    --print('tt', s, f)
     return f()
 end
 
@@ -441,7 +441,7 @@ function eval_select_st(st)
 end
 
 function eval_st(st) 
-   print('eval:', st)
+   --print('eval:', st)
    if st.type == 'set_st' then
        return eval_set_st(st)
    elseif st.type == "silently_st" then

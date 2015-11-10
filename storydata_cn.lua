@@ -1111,6 +1111,7 @@ Dave Justus
 <<choice [[人类的食物！试试厨房吧。|trythegalley]]>> | <<choice [[就吃老鼠饲料吧。|eatratfood]]>>
 <<elseif $triedgalley is 1>>
 <<choice [[再去试试厨房吧。|tryinggalleydoor]]>> | <<choice [[就吃老鼠饲料吧。|eatratfood]]>><<endif>>
+
 <<elseif $rations is 1>>嘿，除了口粮，我还找到了万不得已能当饭吃的老鼠饲料，甚至一个半满的水瓶呢。
 瞧瞧。我们这叫“半满”呢。
 简直是太乐观了。
@@ -6173,5 +6174,4 @@ B，我要是对受伤的那只发起攻势的话……谁能跟我保证剩下�
 
 
 :: gameover
-gameover
-]====]
+gameover]====]

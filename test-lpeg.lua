@@ -6,6 +6,7 @@ require 'storydata_cn'
 
 function eval(s)
     local f = loadstring(s) 
+    print('tt', s, f)
     return f()
 end
 
@@ -40,7 +41,7 @@ local function space_or_parent(pat) return space((C(P'(')+P' ')^0 * pat * (C(P')
 local idenchar = R('AZ', 'az')+'_'
 local iden = idenchar * (idenchar+R'09')^0
 
-local fun_name = idenchar * (sp*idenchar+R'09')^0
+local fun_name = idenchar * (sp*idenchar+R'09'+P'?')^0
 
 local digit = R'09'
 local digits= digit^1
@@ -93,7 +94,7 @@ local b_operator = operatorComparison+operatorAddSub+operatorAndAnd+operatorOrOr
 
 local function any_text_except(except) return (P(1)-except)^1 end
 
-local exp_v = int+var+bool+time+string
+local exp_v = int+var+bool+time+C(string)
 -------------------------------------------------
 local function to_lua_exp(list) 
     local value = ""
@@ -207,27 +208,20 @@ local ST_LIST = P{
             new_line_space(P'<<endif>>')) / do_if_st
 } ^ 1
 
-local fun_decl = Cg(P'::'*space(C(fun_name))*S'\r\n'^1*C((P(1)-':')^0))
+local function to_function_list(name, body)
+    --print(name, body)
+    function_list[name] = body
+end
 
-local fun_decl_list = Cf(Ct""*(new_line_space(fun_decl))^1, rawset)
+local fun_decl = P'::'*space(C(fun_name))*S'\r\n'^1*C((P(1)-':')^0) / to_function_list
+
+local fun_decl_list = (new_line_space(fun_decl))^1
 
 local function_p = Ct(ST_LIST)
 
 print(function_p:match [==[
-<<silently>><<set $rations = 1>><<set $hurtshoulder = 1>><<endsilently>>
-我的肩膀都甩脱臼了！
-可是这太值得了！
-因为我在痛不欲生——！的同时！——吃着辣椒通心粉，喝着瓶装水！
-这辣椒通心粉有点恶心——！的同时！——是我这辈子吃过最好吃的东西！
-可惜马上就要吃完了……
-……然后我就得处理我可怜的肩膀了，为了一份辣椒通心粉，我也是拼了，对着一扇打不开的液压门锤了那么久。
-不过那个难题还是留给3分钟之后的我吧。
-<<if $ratpellets eq 1>>而且我看谁都不会有反对意见：不论怎么看，这都比老鼠饲料好吃一万倍！
-我现在有了食物和水，还有老鼠饲料作战备粮。
-得考虑一下过夜的问题了。[[sleepingplans]]
-<<else>>那么，现在食物的问题解决了，我可以要么去看看实验室里还剩下什么东西没有……
-……要么考虑睡觉的事儿了。你怎么看？
-<<choice [[去实验室看看。|trythelab]]>> | <<choice [[准备洗洗睡吧。|sleepingplans]]>><<endif>>]==]
+    gameover
+]==]
 )
 
 --[====[print(exp:match "(($x+5) is 0) and $y is 1 and ($z is 1)")
@@ -348,7 +342,10 @@ function delay_do_function(fun_name)
 end
 
 function do_function_list(data) 
-   function_list = (fun_decl_list):match(data)
+   (fun_decl_list):match(data)
+
+   assert(function_list['disappearance'] ~= nil)
+   assert(function_list['gameover'] ~= nil)
     
    do_function('Start')
 end
@@ -364,11 +361,14 @@ function eval_set_st(set_st)
     local exp = value[3]
 
     if op == '=' then
-        _M[name] = eval_exp(exp)
+        eval(name .. '=' .. tostring(eval_exp(exp)))
+        --_M[name] = eval_exp(exp)
     elseif op == '+=' then
-        _M[name] = _M[name] + eval_exp(exp)
+        eval(name .. '=' .. name .. '+' .. tostring(eval_exp(exp)))
+        --_M[name] = _M[name] + eval_exp(exp)
     elseif op == '-=' then
-        _M[name] = _M[name] - eval_exp(exp)
+        eval(name .. '=' .. name .. '-' .. tostring(eval_exp(exp)))
+        --_M[name] = _M[name] - eval_exp(exp)
     else
         assert(false, op)
     end
@@ -382,20 +382,29 @@ function eval_if_st(st)
 
     if eval(exp) then
         eval_st_list_not_first(st.value.if_block) 
-    elseif (#elseif_blocks > 0) and (elseif_blocks[1] ~= nil) and eval(elseif_blocks[1]) then
+    elseif (#elseif_blocks > 0) and (elseif_blocks[1] ~= nil) and eval(elseif_blocks[1][1].value) then
         eval_st_list_not_first(st.value.elseif_blocks[1]) 
-    elseif (#elseif_blocks > 0) and (elseif_blocks[2] ~= nil) and eval(elseif_blocks[2]) then
+    elseif (#elseif_blocks > 0) and (elseif_blocks[2] ~= nil) and eval(elseif_blocks[2][1].value) then
         eval_st_list_not_first(st.value.elseif_blocks[2]) 
-    elseif (#elseif_blocks > 0) and (elseif_blocks[3] ~= nil) and eval(elseif_blocks[3]) then
+    elseif (#elseif_blocks > 0) and (elseif_blocks[3] ~= nil) and eval(elseif_blocks[3][1].value) then
         eval_st_list_not_first(st.value.elseif_blocks[3]) 
-    elseif (#elseif_blocks > 0) and (elseif_blocks[4] ~= nil) and eval(elseif_blocks[4]) then
+    elseif (#elseif_blocks > 0) and (elseif_blocks[4] ~= nil) and eval(elseif_blocks[4][1].value) then
         eval_st_list_not_first(st.value.elseif_blocks[4]) 
-    elseif (#elseif_blocks > 0) and (elseif_blocks[5] ~= nil) and eval(elseif_blocks[5]) then
+    elseif (#elseif_blocks > 0) and (elseif_blocks[5] ~= nil) and eval(elseif_blocks[5][1].value) then
         eval_st_list_not_first(st.value.elseif_blocks[5]) 
-    elseif (#elseif_blocks > 0) and (elseif_blocks[6] ~= nil) and eval(elseif_blocks[6]) then
+    elseif (#elseif_blocks > 0) and (elseif_blocks[6] ~= nil) and eval(elseif_blocks[6][1].value) then
         eval_st_list_not_first(st.value.elseif_blocks[6]) 
     elseif (#else_block>0) then
         eval_st_list(else_block)
+    else
+        print('triedgalley', triedgalley)
+        print('rations', _M['rations'])
+        print('elseif_blocks', elseif_blocks)
+        if (#elseif_blocks > 0) and (elseif_blocks[1] ~= nil) and elseif_blocks[1][1].value~=nil then
+            print(eval(elseif_blocks[1][1].value))
+            print(rations == 1)
+            print('fffffuuuufufufufu', elseif_blocks[1][1].value)
+        end
     end 
 end
 

@@ -347,7 +347,7 @@ function do_function_list(data)
    assert(function_list['disappearance'] ~= nil)
    assert(function_list['gameover'] ~= nil)
     
-   do_function('Start')
+   --do_function('Start')
 end
 
 function eval_exp(exp) 
@@ -459,6 +459,9 @@ function eval_st_list(st_list)
 end
 
 do_function_list(all_data)
+
+--do_function('firstcheckin')
+do_function('postcaravelassessment')
 
 --print(select_st:match "<<choice [[谁在说话？|whois]]>> | <<choice [[我收到了。|message received]]>>")
 

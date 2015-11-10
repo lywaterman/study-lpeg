@@ -19,6 +19,8 @@ Ct= lpeg.Ct
 Cg = lpeg.Cg
 Cf = lpeg.Cf
 
+V = lpeg.V
+
 
 
 local sp=P' '^0
@@ -81,9 +83,11 @@ local b_operator = operatorComparison+operatorAddSub+operatorAndAnd+operatorOrOr
 local function any_text_except(except) return (P(1)-except)^1 end
 
 local exp_v = int+var+bool+time+string
-
 -------------------------------------------------
 local function to_lua_exp(ev1, os, ev2) 
+    if ev2 == nil then
+        return ev1
+    end 
     if os == 'is' then
         os = '=='
     elseif os == 'gte' then
@@ -92,12 +96,11 @@ local function to_lua_exp(ev1, os, ev2)
 
     return ev1 ..' '.. os ..' ' .. ev2
 end
-local exp_op = space(exp_v)*C(b_operator)*space(exp_v) / to_lua_exp
+local exp_op = (space(exp_v)*C(b_operator)*space(exp_v)) / to_lua_exp
 ---------------------------------------------------
+local exp_op_op = space(exp_op+exp_v)*(C(b_operator)*space(exp_op+exp_v))^0 / to_lua_exp
 
-local exp_op_op = space(exp_op+exp_v)*C(b_operator)*space(exp_op+exp_v) / to_lua_exp
-
-local exp = exp_op_op+exp_v
+local exp = exp_op_op + exp_v
 
 --------set 表达式 set var
 local function set_var(name, value)
@@ -164,31 +167,50 @@ local select_st = Ct(choice_st * space(Or) * choice_st) / return_select_st
 
 local silently_st = new_line_space(P'<<silently>>') *Ct((new_line_space(set_st))^0)* new_line_space(P'<<endsilently>>')
 
-local st_no_if = silently_st + select_st + call_function
+local function any_text_f(text)
+    return {type='text_st', value=text}
+end
+
+local st_no_if = silently_st + select_st + call_function + (any_text_except(S'<[')/any_text_f)
 
 local function do_if_st(t)
     return {type='if_st', value=t}
 end
 
-local if_st = Ct(P'<<if '*space(Cg(exp, 'ifexp'))*P'>>' * new_line_space(Cg(st_no_if^0, 'if_st1')) * new_line_space(Cg(any_text_except(S'<['), 'if_text')) * new_line_space(Cg(st_no_if^0, 'if_st2')) *
-new_line_space(Ct(P'<<elseif '*space(Cg(exp, 'elseifexp'))*P'>>' *new_line_space(Cg(st_no_if^0, 'elseif_st1'))* new_line_space(Cg(any_text_except(S'<['), 'elseif_text')) *new_line_space(Cg(st_no_if^0, 'elseif_st2'))))^0 *
-new_line_space(P'<<else>>' *new_line_space(Cg(st_no_if^0, 'else_st1'))* new_line_space(Cg(any_text_except(S'<['), 'else_text')) *new_line_space(Cg(st_no_if^0, 'else_st2')) )^-1
-* new_line_space(P'<<endif>>')) / do_if_st
-
-local st_l1 = if_st + st_no_if 
-
-local if_st2 = Ct(P'<<if '*space(Cg(exp, 'ifexp'))*P'>>' * new_line_space(Cg(st_l1^0, 'if_st1')) * new_line_space(Cg(any_text_except(S'<['), 'if_text')) * new_line_space(Cg(st_l1^0, 'if_st2')) *
-new_line_space(Ct(P'<<elseif '*space(Cg(exp, 'elseifexp'))*P'>>' *new_line_space(Cg(st_l1^0, 'elseif_st1'))* new_line_space(Cg(any_text_except(S'<['), 'elseif_text')) *new_line_space(Cg(st_l1^0, 'elseif_st2'))))^0 *
-new_line_space(P'<<else>>' *new_line_space(Cg(st_l1^0, 'else_st1'))* new_line_space(Cg(any_text_except(S'<['), 'else_text')) *new_line_space(Cg(st_l1^0, 'else_st2')) )^-1
-* new_line_space(P'<<endif>>')) / do_if_st
-
-st_l2 = if_st2 + st_no_if 
+local ST_LIST = P{
+    'ST';
+    ST = (new_line_space(lpeg.V"if_st"+st_no_if)),
+    if_st =  Ct(P'<<if ' * Cg(space(exp), 'if_exp') * P'>>' * new_line_space(Cg(V"ST", 'if_sts'))^1 *
+            new_line_space(P'<<elseif '* Cg(space(exp), 'elseif_exp') * P'>>' * new_line_space(Cg(V"ST", 'elseif_sts'))^1)^0 * 
+            new_line_space(P'<<else>>'                      * new_line_space(Cg(V"ST", 'else_sts'))^1)^-1 * 
+            new_line_space(P'<<endif>>')) / do_if_st
+} ^ 1
 
 local fun_decl = Cg(P'::'*space(C(fun_name))*S'\r\n'^1*C((P(1)-':')^0))
 
 local fun_decl_list = Cf(Ct""*(new_line_space(fun_decl))^1, rawset)
 
-local function_p = Ct(new_line_space(st_l2)^0 * C(new_line_space(any_text_except(S'<['))^0)* new_line_space(st_l2)^0)
+local function_p = ST_LIST 
+
+print(ST_LIST:match [==[
+<<silently>><<set $ratpellets = 1>><<endsilently>>
+<<if $rations is 0>>还有个（有点）好的消息。我不会饿死在这里了。我找到了老鼠饲料，以及一个半满的水瓶。
+瞧瞧。我们这叫“半满”呢。
+简直是太乐观了。
+所以……我该知足了，就靠老鼠饲料度日子了……
+……或者，还是把这当成最好永远用不到的后备计划吧。我该去找点人吃的。
+<<if $triedgalley is 0>>
+<<choice [[人类的食物！试试厨房吧。|trythegalley]]>> | <<choice [[就吃老鼠饲料吧。|eatratfood]]>>
+<<elseif $triedgalley is 1>>
+<<choice [[再去试试厨房吧。|tryinggalleydoor]]>> | <<choice [[就吃老鼠饲料吧。|eatratfood]]>><<endif>>
+
+<<elseif $rations is 1>>嘿，除了口粮，我还找到了万不得已能当饭吃的老鼠饲料，甚至一个半满的水瓶呢。
+瞧瞧。我们这叫“半满”呢。
+简直是太乐观了。
+总之，现在天色已晚。我最好想好怎么睡觉的问题。
+[[sleepingplans]]<<endif>>]==])
+
+
 
 --print(C(exp_op):match [==[ $crewburied is 0 and $capalive is 0]==])
 --print(C(if_st):match [==[<<if $crewburied is 0 and $capalive is 0>>我要接着去挖墓，埋葬船长和船员们，我想这是一件善事吧。
@@ -202,7 +224,7 @@ local function_p = Ct(new_line_space(st_l2)^0 * C(new_line_space(any_text_except
 --<<elseif $crewburied is 1 and $capalive is 0>>再挖一个墓坑应该不会花太多时间。今天我已经挖了好多次，很熟练了。
 --我要把阿雅船长和船员们埋在一起。我想她会喜欢这样的。
 --过会儿再联系你。[[delay 30m|everybodyburied]]<<endif>>]==])
---
+
 
 --print(C(if_st):match [==[<<if $x is 1>>你说的福建省地方
 --<<silently>><<set $toldname = 0>>
@@ -286,7 +308,7 @@ function do_function_list(data)
    do_function('trythelab')
 end
 
-do_function_list(all_data)
+--do_function_list(all_data)
 
 --print(select_st:match "<<choice [[谁在说话？|whois]]>> | <<choice [[我收到了。|message received]]>>")
 

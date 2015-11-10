@@ -25,6 +25,7 @@ V = lpeg.V
 
 local sp=P' '^0
 local function space(pat) return sp*pat*sp end
+local function space_or_parent(pat) return space(C(S'( '^0) * pat * C(S' )'^0)) end
 
 local idenchar = R('AZ', 'az')+'_'
 local iden = idenchar * (idenchar+R'09')^0
@@ -84,30 +85,32 @@ local function any_text_except(except) return (P(1)-except)^1 end
 
 local exp_v = int+var+bool+time+string
 -------------------------------------------------
-local function to_lua_exp(ev1, os, ev2) 
-    if ev2 == nil then
-        return ev1
-    end 
-    if os == 'is' then
-        os = '=='
-    elseif os == 'gte' then
-        os = '>='
+local function to_lua_exp(list) 
+    local value = ""
+   for i, v in ipairs(list) do
+    if v == 'is' then
+        v = '=='
+    elseif v == 'gte' then
+        v = '>='
     end
 
-    return ev1 ..' '.. os ..' ' .. ev2
-end
-local exp_op = (space(exp_v)*C(b_operator)*space(exp_v)) / to_lua_exp
----------------------------------------------------
-local exp_op_op = space(exp_op+exp_v)*(C(b_operator)*space(exp_op+exp_v))^0 / to_lua_exp
+    value = value .. v ..' ' 
+    end 
 
-local exp = exp_op_op + exp_v
+    return {type='exp', value=value}
+end
+local exp_op = Ct(space_or_parent(exp_v)*(C(b_operator)*space_or_parent(exp_v))^0) / to_lua_exp
+---------------------------------------------------
+--local exp_op_op = (space(exp_op+exp_v)*(C(b_operator)*space(exp_op+exp_v))^0) / to_lua_exp
+
+local exp = exp_op
 
 --------set 表达式 set var
 local function set_var(name, value)
     return {type='set_st', value=name .. '=' .. tostring(value)}
 end
 
-local set_st = P'<<set '*space(var)*'='*space(exp)*P'>>' / set_var
+local set_st = (P'<<set '*space(var)*assignmentOperator*space(exp)*P'>>') / set_var
 ---------------------------------
 
 local then_st = '|'*C(fun_name)
@@ -165,7 +168,10 @@ local function return_select_st(x)
 end
 local select_st = Ct(choice_st * space(Or) * choice_st) / return_select_st
 
-local silently_st = new_line_space(P'<<silently>>') *Ct((new_line_space(set_st))^0)* new_line_space(P'<<endsilently>>')
+local function return_silent_st(x)
+    return {type='silently_st', value=x}
+end
+local silently_st = (new_line_space(P'<<silently>>') *Ct((new_line_space(set_st))^0)* new_line_space(P'<<endsilently>>')) / return_silent_st
 
 local function any_text_f(text)
     return {type='text_st', value=text}
@@ -180,9 +186,9 @@ end
 local ST_LIST = P{
     'ST';
     ST = (new_line_space(lpeg.V"if_st"+st_no_if)),
-    if_st =  Ct(P'<<if ' * Cg(space(exp), 'if_exp') * P'>>' * new_line_space(Cg(V"ST", 'if_sts'))^1 *
-            new_line_space(P'<<elseif '* Cg(space(exp), 'elseif_exp') * P'>>' * new_line_space(Cg(V"ST", 'elseif_sts'))^1)^0 * 
-            new_line_space(P'<<else>>'                      * new_line_space(Cg(V"ST", 'else_sts'))^1)^-1 * 
+    if_st =  Ct(Cg(Ct(P'<<if ' * space(exp) * P'>>' * new_line_space(V"ST")^1), 'if_block') *
+            Cg(Ct(new_line_space(P'<<elseif '* space(exp) * P'>>' * new_line_space(V"ST")^1)^0), 'elseif_block') * 
+            Cg(Ct(new_line_space(P'<<else>>'                      * new_line_space(V"ST")^1)^-1), 'else_block') * 
             new_line_space(P'<<endif>>')) / do_if_st
 } ^ 1
 
@@ -190,16 +196,19 @@ local fun_decl = Cg(P'::'*space(C(fun_name))*S'\r\n'^1*C((P(1)-':')^0))
 
 local fun_decl_list = Cf(Ct""*(new_line_space(fun_decl))^1, rawset)
 
-local function_p = ST_LIST 
+local function_p = Ct(ST_LIST)
 
-print(ST_LIST:match [==[
+print(exp:match "(($x+5) is 0) and $y is 1 and ($z is 1)")
+
+print(function_p:match [==[
 <<silently>><<set $ratpellets = 1>><<endsilently>>
 <<if $rations is 0>>还有个（有点）好的消息。我不会饿死在这里了。我找到了老鼠饲料，以及一个半满的水瓶。
 瞧瞧。我们这叫“半满”呢。
 简直是太乐观了。
 所以……我该知足了，就靠老鼠饲料度日子了……
 ……或者，还是把这当成最好永远用不到的后备计划吧。我该去找点人吃的。
-<<if $triedgalley is 0>>
+<<if $triedgalley is 0 and $x is 2 and $y is 3>>
+……或者，还是把这当成最好永远用不到的后备计划吧。我该去找点人吃的。
 <<choice [[人类的食物！试试厨房吧。|trythegalley]]>> | <<choice [[就吃老鼠饲料吧。|eatratfood]]>>
 <<elseif $triedgalley is 1>>
 <<choice [[再去试试厨房吧。|tryinggalleydoor]]>> | <<choice [[就吃老鼠饲料吧。|eatratfood]]>><<endif>>

@@ -69,6 +69,11 @@ local time=int*C(P's'+P'm') / to_second
 
 local var = '$'*C(iden)
 
+local function to_value(t)
+    return eval("return " .. t) or 0
+end
+local var1 = ('$'*C(iden))/to_value
+
 local Q = P'"'
 
 local string =  Q * (1-Q)^0 * Q
@@ -193,7 +198,17 @@ local function any_text_f(text)
     return {type='text_st', value=text}
 end
 
-local st_no_if = silently_st + select_st + call_function + (any_text_except(S'<[')/any_text_f)
+local function any_text_f_with_var(t)
+    print('8123908129038129038908901238908123', t)
+    local value = ""
+    for i, v in ipairs(t) do
+       value = value .. tostring(v) 
+    end
+
+    return {type='text_st', value=value}
+end
+
+local st_no_if = silently_st + set_st + select_st + call_function + Ct(C(any_text_except(S'<['))*((P'<<'*var1*P'>>')*C(any_text_except(S'<[')))^1)/any_text_f_with_var + (any_text_except(S'<[')/any_text_f)
 
 local function do_if_st(t)
     return {type='if_st', value=t}
@@ -399,6 +414,7 @@ function eval_if_st(st)
     else
         print('triedgalley', triedgalley)
         print('rations', _M['rations'])
+        print('rations', _M['rations'])
         print('elseif_blocks', elseif_blocks)
         if (#elseif_blocks > 0) and (elseif_blocks[1] ~= nil) and elseif_blocks[1][1].value~=nil then
             print(eval(elseif_blocks[1][1].value))
@@ -460,8 +476,9 @@ end
 
 do_function_list(all_data)
 
+do_function('Start')
 --do_function('firstcheckin')
-do_function('postcaravelassessment')
+--do_function('backatcaravel')
 
 --print(select_st:match "<<choice [[谁在说话？|whois]]>> | <<choice [[我收到了。|message received]]>>")
 

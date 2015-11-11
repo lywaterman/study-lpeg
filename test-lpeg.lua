@@ -4,11 +4,6 @@ require 'ml'.import()
 
 require 'storydata_cn'
 
-function eval(s)
-    local f = loadstring(s) 
-    --print('tt', s, f)
-    return f()
-end
 
 tostring=tstring
 
@@ -22,6 +17,12 @@ end
 --end
 
 module('test-lpeg', package.seeall)
+
+function eval(s)
+    local f = loadstring(s) 
+    --print('tt', s, f)
+    return f()
+end
 
 function show_text(text)
     print('show_text', '[' .. text .. ']')

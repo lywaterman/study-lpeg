@@ -12,6 +12,15 @@ end
 
 tostring=tstring
 
+ppp_name = "" 
+
+function dprint(name)
+    ppp_name = name
+end
+
+--function print(...)
+--end
+
 module('test-lpeg', package.seeall)
 
 function show_text(text)
@@ -345,10 +354,10 @@ local fileContent = read_file("StoryData_cn.txt");
 
 --执行方法
 function do_function(fun_name)
-    print('do_function', fun_name)
+    dprint(fun_name)
     local sts = function_p:match(function_list[fun_name])
-    print('function body', function_list[fun_name]) 
-    print('fun_sts', sts)
+    --print('function body', function_list[fun_name]) 
+    --print('fun_sts', sts)
     eval_st_list(sts)
 end
 
@@ -362,7 +371,7 @@ function do_function_list(data)
    assert(function_list['disappearance'] ~= nil)
    assert(function_list['gameover'] ~= nil)
     
-   --do_function('Start')
+   do_function('realstart')
 end
 
 function eval_exp(exp) 
@@ -434,8 +443,12 @@ function eval_select_st(st)
     for i,v in ipairs(st.value) do
         print(i, v.text)
     end
-
+    
     local choice = tonumber(io.read())
+    if choice > #st.value then
+        choice = #st.value
+    end
+    --local choice = math.random(1,2)
 
     eval_call_function(st.value[choice])
 end
@@ -475,9 +488,38 @@ function eval_st_list(st_list)
 end
 
 do_function_list(all_data)
-
 do_function('Start')
---do_function('firstcheckin')
+
+do
+--return
+end
+--do_function('deadendmountaindaytwo')
+
+local log = io.open( 'crash.log', 'a' )
+
+local number = 0
+local nnn = 1
+while true do
+    local result, reason = pcall(do_function, 'Start')
+
+    if nnn % 1000 == 0 then
+        io.write('.') 
+        io.flush()
+    end
+    nnn = nnn + 1
+    if result == false or ppp_name ~= "gameover" then
+        log:write( ppp_name )
+        log:write( '\n' )
+        log:flush()
+        number = number + 1
+
+        if number > 100000 then
+            os.exit()
+        end
+    end
+end
+
+log:close()
 --do_function('backatcaravel')
 
 --print(select_st:match "<<choice [[谁在说话？|whois]]>> | <<choice [[我收到了。|message received]]>>")

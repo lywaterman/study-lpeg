@@ -38,6 +38,43 @@
 [通讯正在接入]
 [[launch]]
 
+:: realstart
+<<silently>>
+<<set $toldname = 0>>
+<<set $boulderdayone = 0>>
+<<set $deadenddayone = 0>>
+<<set $hurtshoulder = 0>>
+<<set $mapsuggest = 0>>
+<<set $toldstudent = 0>>
+<<set $backofship = 0>>
+<<set $frontofship = 0>>
+<<set $rations = 0>>
+<<set $ratpellets = 0>>
+<<set $startedburialtalk = 0>>
+<<set $capalive = 1>>
+<<set $ginny = 0>>
+<<set $power = "none">>
+<<set $capburied = 0>>
+<<set $crewburied = 0>>
+<<set $hurtankle = 0>>
+<<set $pills = 0>>
+<<set $glowrods = 0>>
+<<set $ginnycaravel = 0>>
+<<set $zombierats = 0>>
+<<set $compassweird = 0>>
+<<set $bringginnytwo = 0>>
+<<set $proximityalarm = 0>>
+<<set $trycaravelgalley = 0>>
+<<set $homemadecompass = 0>>
+<<set $triedgalley = 0>>
+<<set $peakdoorway = 0>>
+<<set $sendingsos = 0>>
+<<set $warnship = 0>>
+<<set $overridetarget = 0>>
+<<set $clockwisecrater = 0>>
+<<set $plural = "none">>
+<<set $testrods = 10>>
+<<endsilently>>
 
 
 :: launch
